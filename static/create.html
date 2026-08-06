@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Support Ticket</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #1f2937;
+        }
+
+        label {
+            display: block;
+            margin-top: 16px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input, textarea, select, button {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        #message {
+            margin-top: 18px;
+            font-weight: bold;
+        }
+
+        .success {
+            color: #15803d;
+        }
+
+        .error {
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Create a Support Ticket</h1>
+
+        <form id="ticketForm">
+            <label for="customer_name">Your name</label>
+            <input id="customer_name" type="text" required>
+
+            <label for="customer_email">Your email</label>
+            <input id="customer_email" type="email" required>
+
+            <label for="subject">Subject</label>
+            <input id="subject" type="text" required>
+
+            <label for="description">Describe your issue</label>
+            <textarea id="description" required></textarea>
+
+            <label for="priority">Priority</label>
+            <select id="priority">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+            </select>
+
+            <button type="submit">Create Ticket</button>
+        </form>
+
+        <p id="message"></p>
+    </div>
+
+    <script>
+        const form = document.getElementById("ticketForm");
+        const message = document.getElementById("message");
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const ticketData = {
+                customer_name: document.getElementById("customer_name").value,
+                customer_email: document.getElementById("customer_email").value,
+                subject: document.getElementById("subject").value,
+                description: document.getElementById("description").value,
+                priority: document.getElementById("priority").value
+            };
+
+            try {
+                const response = await fetch("/tickets/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(ticketData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error("Ticket could not be created.");
+                }
+
+                message.textContent =
+                    `Ticket created successfully! Ticket number: ${result.ticket_id}`;
+
+                message.className = "success";
+                form.reset();
+
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        });
+    </script>
+</body>
+</html>
