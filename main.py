@@ -1,73 +1,57 @@
-import re
 
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-
-from database import Base, engine, get_db
-from models import Ticket
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from schemas import (
-    TicketCreate,TicketCreateResponse, TicketResponse
+from contextlib import asynccontextmanager
+
+from database import engine, Base
+from routers import tickets
+
+# it is like a special FastAPI function that says, “Before the app starts, prepare the database; when the app closes, run cleanup/shutdown code.”
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+   
+    print("Starting Support CRM...")
+    Base.metadata.create_all(bind=engine)
+    print("Database tables ready")
+    yield  # App runs here
+    print("Shutting down Support CRM...")
+
+
+# Create the FastAPI app
+app = FastAPI(
+    title="Support CRM",
+    description="Customer Support Ticketing System — Datastraw Assessment",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
+app.include_router(tickets.router)
 
-def generate_ticket_id(db: Session) -> str:
-    """Return the next sequential ID, ignoring legacy alphanumeric IDs."""
-    ticket_ids = db.query(Ticket.ticket_id).all()
-    numeric_ids = (
-        int(match.group(1))
-        for (ticket_id,) in ticket_ids
-        if (match := re.fullmatch(r"TKT-(\d+)", ticket_id))
-    )
-    next_number = max(numeric_ids, default=0) + 1
-    return f"TKT-{next_number:03d}"
-
-def build_ticket_response(t: Ticket) -> TicketResponse:
-    
-    return TicketResponse(
-        id=str(t.id),
-        ticket_id=t.ticket_id,
-        customer_name=t.customer_name,
-        customer_email=t.customer_email,
-        subject=t.subject,
-        status=t.status,
-        priority=t.priority,
-        created_at=t.created_at,
-        updated_at=t.updated_at
-    )
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI()
+#PAGE ROUTES 
+@app.get("/")
+def home():
+    """Serves the home page (ticket list)"""
+    return FileResponse("static/index.html")
 
 
 @app.get("/create")
-def home():
-    return FileResponse("static/create.html")  # Serve the HTML file
+def create_page():
+    """Serves the create ticket form page"""
+    return FileResponse("static/create.html")
 
 
-#CREATE TICKET  
-@app.post("/tickets", response_model=TicketCreateResponse, status_code=201)
-def create_ticket(ticket_data: TicketCreate, db: Session = Depends(get_db)):
+@app.get("/ticket/{ticket_id}")
+def ticket_detail_page(ticket_id: str):
+    """Serves the ticket detail page"""
+    return FileResponse("static/ticket.html")
 
-    ticket_id = generate_ticket_id(db)
- 
-    new_ticket = Ticket(
-        ticket_id=ticket_id,
-        customer_name=ticket_data.customer_name.strip(),
-        customer_email=ticket_data.customer_email.strip().lower(),
-        subject=ticket_data.subject.strip(),
-        description=ticket_data.description.strip(),
-        status="Open",
-        priority=ticket_data.priority or "Medium"
-    )
- 
-    db.add(new_ticket)
-    db.commit()
-    db.refresh(new_ticket)
- 
-    return TicketCreateResponse(
-        ticket_id=new_ticket.ticket_id,
-        created_at=new_ticket.created_at
-    )
+
+#HEALTH CHECK
+@app.get("/health")
+def health_check():
+    """Simple endpoint to verify the server is running. Railway uses this."""
+    return {"status": "ok", "message": "Support CRM is running"}
