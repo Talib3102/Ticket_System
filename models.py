@@ -12,8 +12,7 @@ class Ticket(Base):
     # Primary key
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
  
-    ticket_id = Column(String(20), unique=True, nullable=False, index=True,default=lambda: f"TKT-{uuid.uuid4().hex[:8].upper()}")
- 
+    ticket_id = Column(String(20), unique=True, nullable=False, index=True) 
     # Customer info
     customer_name = Column(String(100), nullable=False)
     customer_email = Column(String(150), nullable=False)
