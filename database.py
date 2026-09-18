@@ -13,11 +13,16 @@ if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL environment variable is not set. "
                        "Add it in Render Dashboard → Environment.")
 
-# Render provides postgres:// but SQLAlchemy 2.x requires postgresql://
+# Render/Supabase may provide postgres:// but SQLAlchemy 2.x requires postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# Supabase requires SSL for external connections
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    connect_args={"sslmode": "require"}
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
